@@ -686,6 +686,13 @@ config GPIO_ADNP
 	  enough to represent all pins, but the driver will assume a
 	  register layout for 64 pins (8 registers).
 
+config GPIO_AQUABLUE
+	tristate "Aquablue GPIO on Aquabyte Zoltar"
+	depends on OF_GPIO
+	select GPIOLIB_IRQCHIP
+	help
+	  Enables support for extended GPIO via the Aquablue microcontroller.
+
 config GPIO_MAX7300
 	tristate "Maxim MAX7300 GPIO expander"
 	select GPIO_MAX730X
