@@ -153,15 +153,14 @@ static int max20096_write(struct max20096_device *pdata, u16 word)
 static int max20096_transfer(struct max20096_device *pdata, u16 word, u16* result)
 {
 	int ret;
-    u16 data;
-    struct spi_transfer transfer = {
-        .tx_buf = &word,
-        .rx_buf = &data,
-        .len = sizeof(word), // Length is still in bytes, not words
-        .bits_per_word = 16,
-    };
-
-    struct spi_message message;
+	u16 data;
+	struct spi_transfer transfer = {
+		.tx_buf = &word,
+		.rx_buf = &data,
+		.len = sizeof(word), // Length is still in bytes, not words
+		.bits_per_word = 16,
+	};
+	struct spi_message message;
 
 	if (!pdata->setup) {
 		ret = max20096_setup(pdata);
@@ -177,17 +176,14 @@ static int max20096_transfer(struct max20096_device *pdata, u16 word, u16* resul
 
 	word = cpu_to_be16(word);
 
-    spi_message_init(&message);
-    spi_message_add_tail(&transfer, &message);
+	spi_message_init(&message);
+	spi_message_add_tail(&transfer, &message);
 
 	mutex_lock(&pdata->lock);
-	//ret = spi_write(pdata->spi, &word, sizeof(word));
-    ret = spi_sync(pdata->spi, &message); // full duplex
+	ret = spi_sync(pdata->spi, &message); // full duplex
 	mutex_unlock(&pdata->lock);
 
-    //data = be16_to_cpu(data);
-
-    *result = data;
+	*result = data;
 
 	return ret;
 }
@@ -214,7 +210,7 @@ static int max20096_led_update(struct max20096_led *led)
 }
 
 static int max20096_set_brightness(struct led_classdev *ldev,
-				      enum led_brightness brightness)
+					  enum led_brightness brightness)
 {
 	struct max20096_led *led;
 	led = container_of(ldev, struct max20096_led, ldev);
@@ -228,7 +224,7 @@ static int max20096_read(struct max20096_device *pdata, u16 reg, u16 *result)
 {
 	u16 word = MAX20096_CMD_READ(reg);
 	u16 parity, bit = MAX20096_REG_PARITY(1);
-    u16 response;
+	u16 response;
 	int ret;
 #ifdef MAX20096_DEBUG
 	dev_info(&pdata->spi->dev, "reg=%04x", reg);
@@ -238,12 +234,6 @@ static int max20096_read(struct max20096_device *pdata, u16 reg, u16 *result)
 	ret = max20096_transfer(pdata, word, &response);
 	if (ret < 0) return ret;
 
-	//ret = max20096_write(pdata, word);
-	//if (ret < 0) return ret;
-
-	//ret = spi_read(pdata->spi, &response, sizeof(response));
-	//if (ret < 0) return ret;
-
 	response = be16_to_cpu(response);
 	parity = response & bit;
 	*result = response;
@@ -252,8 +242,8 @@ static int max20096_read(struct max20096_device *pdata, u16 reg, u16 *result)
 	dev_info(&pdata->spi->dev, "read data=%04x", response);
 #endif
 
-	//return max20096_calculate_parity(response & ~bit) == !!parity ? 0 : -EIO;
-    return 0;
+	// TODO implement parity checking 
+	return 0;
 }
 
 static void max20096_reset(struct max20096_device *pdata)
@@ -326,7 +316,7 @@ static ssize_t max20096_config_get(struct device *dev,
 	if (ret < 0) return -EIO;
 
 	return sprintf(buf, "Config reg values:\n" 
-        "CNFG_SPI: CLK_ERR=%d PAR_ERR=%d RW_ERR=%d "
+		"CNFG_SPI: CLK_ERR=%d PAR_ERR=%d RW_ERR=%d "
 		"HW_RST=%d DCHN=%dST_AB=%d\n\tSFT_RB=%d SFT_CSB=%d "
 		"SFT_CLK=%d SFT_SDI=%d\n"
 		"CNFG_GEN: CNFG_SEL=%d PWM1_SEL=%d PWM2_SEL=%d\n\t"
@@ -355,7 +345,7 @@ static DEVICE_ATTR(config, 0444, max20096_config_get, NULL);
 static ssize_t max20096_current_mon_get(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-    struct led_classdev *ldev;
+	struct led_classdev *ldev;
 	struct max20096_led *led;
 	u16 data;
 	int ret;
@@ -363,18 +353,39 @@ static ssize_t max20096_current_mon_get(struct device *dev,
 	ldev = dev_get_drvdata(dev);
 	led = container_of(ldev, struct max20096_led, ldev);
 
-    // debug by reading current register since we can write/read to it
-    // TODO delete when prod
+	// debug by reading current register since we can write/read to it
+	// TODO delete when prod
 	//ret = max20096_read(led->pdata, MAX20096_REG_MON_LED1 + led->id, &data);
 	ret = max20096_read(led->pdata, MAX20096_REG_CNFG_CRNT1 + led->id, &data);
 	if (ret < 0) return -EIO;
 
-    data = data & MAX20096_REG_VALUE;
+	data = data & MAX20096_REG_VALUE;
 
 	return sprintf(buf, 
-            "0x%04x\n", data);
+			"0x%04x\n", data);
 }
 static DEVICE_ATTR(current_mon, 0444, max20096_current_mon_get, NULL);
+
+static ssize_t max20096_ic_temp_get(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *ldev;
+	struct max20096_led *led;
+	u16 data;
+	int ret;
+
+	ldev = dev_get_drvdata(dev);
+	led = container_of(ldev, struct max20096_led, ldev);
+
+	ret = max20096_read(led->pdata, MAX20096_REG_MON_TEMP, &data);
+	if (ret < 0) return -EIO;
+
+	data = data & MAX20096_REG_VALUE;
+
+	return sprintf(buf, 
+			"0x%04x\n", data);
+}
+static DEVICE_ATTR(ic_temp, 0444, max20096_ic_temp_get, NULL);
 
 static ssize_t max20096_pwm_get(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -476,6 +487,7 @@ static DEVICE_ATTR(reset, 0200, NULL, max20096_reset_set);
 static struct attribute *max20096_attrs[] = {
 	&dev_attr_config.attr,
 	&dev_attr_current_mon.attr,
+	&dev_attr_ic_temp.attr,
 	&dev_attr_pwm.attr,
 	&dev_attr_raw.attr,
 	&dev_attr_reset.attr,
