@@ -340,6 +340,26 @@ static ssize_t max20096_config_get(struct device *dev,
 }
 static DEVICE_ATTR(config, 0444, max20096_config_get, NULL);
 
+static ssize_t max20096_current_mon_get(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *ldev;
+	struct max20096_led *led;
+	u16 data;
+	int ret;
+
+	ldev = dev_get_drvdata(dev);
+	led = container_of(ldev, struct max20096_led, ldev);
+
+	ret = max20096_read(led->pdata, MAX20096_REG_MON_LED1 + led->id, &data);
+	if (ret < 0) return -EIO;
+
+	data = data & MAX20096_REG_VALUE;
+
+	return sprintf(buf, "0x%04x\n", data);
+}
+static DEVICE_ATTR(current_mon, 0444, max20096_current_mon_get, NULL);
+
 static ssize_t max20096_pwm_get(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -439,6 +459,7 @@ static DEVICE_ATTR(reset, 0200, NULL, max20096_reset_set);
 
 static struct attribute *max20096_attrs[] = {
 	&dev_attr_config.attr,
+	&dev_attr_current_mon.attr,
 	&dev_attr_pwm.attr,
 	&dev_attr_raw.attr,
 	&dev_attr_reset.attr,
