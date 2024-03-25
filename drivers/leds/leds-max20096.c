@@ -300,18 +300,16 @@ static ssize_t max20096_config_get(struct device *dev,
 {
 	struct led_classdev *ldev;
 	struct max20096_led *led;
-	u16 cmd, cnfg_spi, cnfg_gen;
+	u16 cnfg_spi, cnfg_gen;
 	int ret;
 
 	ldev = dev_get_drvdata(dev);
 	led = container_of(ldev, struct max20096_led, ldev);
 
-	cmd = MAX20096_CMD_READ(MAX20096_REG_CNFG_SPI);
-	ret = max20096_read(led->pdata, cmd, &cnfg_spi);
+	ret = max20096_read(led->pdata, MAX20096_REG_CNFG_SPI, &cnfg_spi);
 	if (ret < 0) return -EIO;
 
-	cmd = MAX20096_CMD_READ(MAX20096_REG_CNFG_GEN);
-	ret = max20096_read(led->pdata, cmd, &cnfg_gen);
+	ret = max20096_read(led->pdata, MAX20096_REG_CNFG_GEN, &cnfg_gen);
 	if (ret < 0) return -EIO;
 
 	return sprintf(buf, "CNFG_SPI: CLK_ERR=%d PAR_ERR=%d RW_ERR=%d "
